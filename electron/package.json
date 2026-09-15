@@ -1,0 +1,14 @@
+{
+  "name": "fortune-assistant",
+  "version": "1.0.0",
+  "description": "每日运势 · 桌面算命小助手（Windows 版）",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . 每日运势 --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-packager": "^17.1.2"
+  }
+}
