@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>每日运势 · 桌面算命小助手</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", -apple-system, "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #FBF5EA 0%, #F5E6D3 100%);
+    color: #43302B;
+    min-height: 100vh;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+  .header { text-align: center; margin-bottom: 40px; }
+  .logo {
+    width: 120px; height: 120px; border-radius: 28px;
+    box-shadow: 0 8px 32px rgba(176, 58, 46, 0.3);
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 36px; color: #B03A2E; margin-bottom: 10px; }
+  .subtitle { font-size: 18px; color: #8A7A6A; }
+  .download-section {
+    display: flex; gap: 20px; justify-content: center; margin: 40px 0;
+    flex-wrap: wrap;
+  }
+  .download-btn {
+    background: #B03A2E; color: #fff; border: none;
+    padding: 16px 32px; border-radius: 12px; font-size: 16px;
+    cursor: pointer; text-decoration: none; display: inline-flex;
+    align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .download-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(176, 58, 46, 0.4); }
+  .download-btn.secondary { background: #B8860B; }
+  .download-btn.secondary:hover { box-shadow: 0 4px 12px rgba(184, 134, 11, 0.4); }
+  .download-count { font-size: 12px; color: #8A7A6A; margin-top: 8px; display: block; }
+  .features {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px; margin: 40px 0;
+  }
+  .feature {
+    background: #fff; padding: 20px; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(90, 60, 30, 0.08);
+    border-left: 4px solid #B8860B;
+  }
+  .feature h3 { color: #B03A2E; margin-bottom: 10px; font-size: 16px; }
+  .feature p { color: #8A7A6A; font-size: 14px; line-height: 1.6; }
+  .footer { text-align: center; margin-top: 40px; color: #8A7A6A; font-size: 14px; }
+  .footer a { color: #B8860B; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <img src="icon.png" alt="每日运势" class="logo">
+    <h1>🏮 每日运势</h1>
+    <p class="subtitle">悬浮在桌面上的算命小助手 · 生辰八字 · 每日运势 · 答案之书</p>
+  </div>
+
+  <div class="download-section">
+    <a href="https://github.com/1230963/fortune-assistant/releases/download/v1.0.0/fortune-mac.zip" class="download-btn">
+      🍎 macOS 下载
+      <span class="download-count" id="mac-count">加载中...</span>
+    </a>
+    <a href="https://github.com/1230963/fortune-assistant/releases/download/v1.0.0/fortune-windows.zip" class="download-btn secondary">
+      🪟 Windows 下载
+      <span class="download-count" id="win-count">加载中...</span>
+    </a>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <h3>🧧 生辰八字</h3>
+      <p>输入公历出生年月日时辰，自动换算农历、排四柱八字、统计五行、分析喜用神。</p>
+    </div>
+    <div class="feature">
+      <h3>📅 每日运势</h3>
+      <p>按你的八字推算今日运势评分、宜忌、五行分析、冲煞提醒，每天自动刷新。</p>
+    </div>
+    <div class="feature">
+      <h3>📖 答案之书</h3>
+      <p>心里默念一个问题，输入页码 1-600，翻开答案之书获得指引。</p>
+    </div>
+    <div class="feature">
+      <h3>🔮 悬浮小球</h3>
+      <p>可收成桌面小球，不占地；双击展开；跨天自动更新；开机自启。</p>
+    </div>
+    <div class="feature">
+      <h3>🔒 隐私模式</h3>
+      <p>生辰八字默认隐藏，点「查看」才显示；所有数据只存本地，不联网。</p>
+    </div>
+    <div class="feature">
+      <h3>🔄 内容热更新</h3>
+      <p>签文/宜忌/答案之书内容自动更新，无需下载新版本。</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>源码: <a href="https://github.com/1230963/fortune-assistant">github.com/1230963/fortune-assistant</a></p>
+    <p>仅供娱乐参考 · 不收集任何数据 · 完全本地运行</p>
+  </div>
+</div>
+
+<script>
+// 调用 GitHub API 显示下载计数
+fetch("https://api.github.com/repos/1230963/fortune-assistant/releases/latest")
+  .then(r => r.json())
+  .then(data => {
+    data.assets.forEach(a => {
+      if (a.name === "fortune-mac.zip") {
+        document.getElementById("mac-count").textContent = a.download_count + " 次下载";
+      } else if (a.name === "fortune-windows.zip") {
+        document.getElementById("win-count").textContent = a.download_count + " 次下载";
+      }
+    });
+  })
+  .catch(() => {
+    document.getElementById("mac-count").textContent = "";
+    document.getElementById("win-count").textContent = "";
+  });
+</script>
+</body>
+</html>
