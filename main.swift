@@ -149,6 +149,7 @@ final class HeaderView: NSView {
         date.textColor = DATE_COLOR
         date.frame = NSRect(x: 14, y: 8, width: frame.width - 28, height: 14)
         date.lineBreakMode = .byTruncatingTail
+        date.tag = 1001
         addSubview(date)
 
         let close = NSButton(title: "", target: nil, action: nil)
@@ -320,6 +321,17 @@ final class Bridge: NSObject, WKScriptMessageHandler {
             setAutostart((body["on"] as? Bool) ?? false)
         case "level":
             if let lv = body["level"] as? String { delegate?.setLevel(lv) }
+        case "setDate":
+            if let dateStr = body["date"] as? String { delegate?.updateDateLabel(dateStr) }
+        case "openURL":
+            if let urlStr = body["url"] as? String, let url = URL(string: urlStr) {
+                NSWorkspace.shared.open(url)
+            }
+        case "autoUpdate":
+            if let urlStr = body["url"] as? String,
+               let version = body["version"] as? String {
+                delegate?.downloadAndPromptUpdate(urlStr, version: version)
+            }
         case "expand":
             delegate?.setMinimized(false)
         default:
@@ -345,7 +357,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         let y = CGFloat((cfg["ny"] as? NSNumber)?.doubleValue ?? 220)
 
         let rect = NSRect(x: x, y: y, width: WIN_W, height: 700)
-        let panel = NSPanel(contentRect: rect,
+        // 自定义 Panel：允许成为 key window（解决 text input 无法输入的问题）
+        final class KeyPanel: NSPanel {
+            override var canBecomeKey: Bool { return true }
+        }
+        let panel = KeyPanel(contentRect: rect,
                             styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
         panel.level = .floating
@@ -391,6 +407,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }
 
         panel.orderFrontRegardless()
+    }
+
+    /// 下载新版本并提示用户退出更新
+    func downloadAndPromptUpdate(_ urlStr: String, version: String) {
+        guard let url = URL(string: urlStr) else { return }
+        let task = URLSession.shared.downloadTask(with: url) { [weak self] (tmpURL, response, error) in
+            guard let tmpURL = tmpURL, error == nil else {
+                DispatchQueue.main.async {
+                    let alert = NSAlert()
+                    alert.messageText = "下载失败"
+                    alert.informativeText = "请检查网络后重试"
+                    alert.runModal()
+                }
+                return
+            }
+            // 移动 zip 到临时目录
+            let zipPath = NSTemporaryDirectory() + "fortune-new.zip"
+            try? FileManager.default.removeItem(atPath: zipPath)
+            try? FileManager.default.copyItem(atPath: tmpURL.path, toPath: zipPath)
+            
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "新版本 v\(version) 已下载完成"
+                alert.informativeText = "点击「退出并更新」将自动替换并重启 APP"
+                alert.addButton(withTitle: "退出并更新")
+                alert.addButton(withTitle: "稍后")
+                let response = alert.runModal()
+                if response == .alertFirstButtonReturn {
+                    self?.performUpdate(zipPath: zipPath)
+                }
+            }
+        }
+        task.resume()
+    }
+
+    /// 执行更新：退出 APP，启动辅助脚本替换并重启
+    func performUpdate(zipPath: String) {
+        let script = """
+        #!/bin/bash
+        sleep 2
+        rm -rf "$HOME/Applications/每日运势.app"
+        unzip -o "\(zipPath)" -d "$HOME/Applications/"
+        open "$HOME/Applications/每日运势.app"
+        """
+        let scriptPath = NSTemporaryDirectory() + "fortune-update.sh"
+        try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
+        
+        // 启动脚本并退出
+        let task = Process()
+        task.launchPath = "/bin/bash"
+        task.arguments = [scriptPath]
+        try? task.run()
+        NSApp.terminate(nil)
+    }
+
+    func updateDateLabel(_ dateStr: String) {
+        // 跨天时由 JS 调用，更新标题栏日期
+        if let dateLabel = header.viewWithTag(1001) as? NSTextField {
+            dateLabel.stringValue = dateStr
+        }
     }
 
     func setLevel(_ lv: String) {

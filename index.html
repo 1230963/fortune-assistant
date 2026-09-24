@@ -675,8 +675,49 @@ async function checkContentUpdate() {
     console.log("内容更新检查失败（离线或首次）:", e.message);
   }
 }
-// 启动时检查（不阻塞 render）
+// 启动时检查内容更新（不阻塞 render）
 setTimeout(checkContentUpdate, 1000);
+
+/* ---------------- 功能更新检查 + 自动更新 ---------------- */
+const APP_VERSION = "1.0.0";
+const RELEASE_API = "https://api.github.com/repos/1230963/fortune-assistant/releases/latest";
+
+async function checkAppUpdate() {
+  try {
+    const res = await fetch(RELEASE_API + "?t=" + Date.now());
+    const release = await res.json();
+    const latest = release.tag_name || "";
+    if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
+      showUpdateBanner(latest, release);
+    }
+  } catch (e) {
+    console.log("功能更新检查失败:", e.message);
+  }
+}
+
+function showUpdateBanner(version, release) {
+  const isMac = !IS_WIN;
+  const asset = release.assets.find(a =>
+    isMac ? a.name.includes("mac") : a.name.includes("windows")
+  );
+  if (!asset) return;
+
+  const banner = document.createElement("div");
+  banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#B8860B;color:#fff;padding:6px 10px;font-size:11px;text-align:center;z-index:100;cursor:pointer";
+  banner.innerHTML = `🎉 新版本 ${version} 可用，点击自动更新`;
+  banner.onclick = () => {
+    banner.innerHTML = "⏳ 正在下载...";
+    banner.style.background = "#8A7A6A";
+    banner.style.cursor = "default";
+    native({
+      action: "autoUpdate",
+      url: asset.browser_download_url,
+      version: version
+    });
+  };
+  document.body.prepend(banner);
+}
+setTimeout(checkAppUpdate, 2000);
 let autostartOn = true;
 window.applyNative = (state) => {
   autostartOn = !!state.autostart;
@@ -1283,8 +1324,8 @@ function personalizedFortune(birth, sign, wx, rng) {
   const defaultJi = [["冲动消费", "守住钱包，别乱花"], ["熬夜", "养足精神明天再战"], ["跟人抬杠", "赢了道理输了心情"], ["暴饮暴食", "七分饱就好"], ["久坐不动", "起来活动活动"]];
   while (jiList.length < 3) jiList.push(defaultJi[jiList.length]);
 
-  // 幸运物：独立种子（日期+生辰+星座+nonce），同人同天永远固定
-  const luckySeed = parseInt(todayStr(), 10) * 100000 +
+  // 幸运物：独立种子（查看日期+生辰+星座+nonce），同人同天固定，预览明天会变
+  const luckySeed = parseInt(getViewDateStr(), 10) * 100000 +
     ((birth.y % 100) * 372 + birth.m * 31 + birth.d) +
     (sign ? (SIGNS.indexOf(sign) + 1) * 7 : 0) +
     (arguments[4] || 0);
