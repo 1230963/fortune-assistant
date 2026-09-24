@@ -222,6 +222,12 @@
     border-radius: 6px; padding: 4px 0; font-size: 12px; min-width: 40px;
   }
   .setrow button { padding: 4px 9px; font-size: 10px; }
+  .sselect {
+    flex: 1; background: #FFFDF7; border: 1px solid #E0D4BE; border-radius: 6px;
+    padding: 4px 6px; font-family: inherit; font-size: 12px; color: #43302B;
+    min-width: 0; outline: none;
+  }
+  .sselect:focus { border-color: #B8860B; }
   .prow { display: flex; gap: 6px; margin-top: 12px; }
   .prow button { flex: 1; padding: 6px 0; font-size: 11px; }
   #meOk { background: #B8860B; color: #fff; }
@@ -375,17 +381,15 @@
     <div class="plabel">出生日期（公历）与时辰 · 用于排生辰八字</div>
     <div class="setrow">
       <span class="slabel">年</span>
-      <button class="ghost" id="yM">◀</button><span class="sval" id="yV"></span><button class="ghost" id="yP">▶</button>
-    </div>
-    <div class="setrow">
+      <select class="sselect" id="ySel"><option value="">未设置</option></select>
       <span class="slabel">月</span>
-      <button class="ghost" id="mM">◀</button><span class="sval" id="mV"></span><button class="ghost" id="mP">▶</button>
-      <span class="slabel" style="margin-left:6px">日</span>
-      <button class="ghost" id="dM">◀</button><span class="sval" id="dV"></span><button class="ghost" id="dP">▶</button>
+      <select class="sselect" id="mSel"></select>
+      <span class="slabel">日</span>
+      <select class="sselect" id="dSel"></select>
     </div>
     <div class="setrow">
       <span class="slabel">时辰</span>
-      <button class="ghost" id="hM">◀</button><span class="sval" id="hV"></span><button class="ghost" id="hP">▶</button>
+      <select class="sselect" id="hSel" style="flex:1"></select>
     </div>
     <div class="prow">
       <button class="ghost" id="meClear">全部清除</button>
@@ -1245,7 +1249,7 @@ function personalizedFortune(birth, sign, wx, rng) {
     "劫财": [["团队协作", "今日劫财当值，竞争中有合作"], ["维护人脉", "劫财主社交，关系要经营"], ["分担压力", "别一个人扛，找人分担"]]
   };
   const shishenYi = SHISHEN_YI[todaySS] || SHISHEN_YI["比肩"];
-  yiList.push(shishenYi[Math.floor(Math.random() * shishenYi.length)]);
+  yiList.push(shishenYi[rint(rng, 0, shishenYi.length - 1)]);
 
   // 3. 五行喜忌宜
   if (rel === "得生") yiList.push(["求助贵人", "今日贵人运佳，开口不丢人"]);
@@ -1279,7 +1283,7 @@ function personalizedFortune(birth, sign, wx, rng) {
     "劫财": [["借钱给人", "劫财当值，钱包捂紧"], ["合伙冲动", "劫财主争夺，合伙要谨慎"]]
   };
   const shishenJi = SHISHEN_JI[todaySS] || SHISHEN_JI["劫财"];
-  jiList.push(shishenJi[Math.floor(Math.random() * shishenJi.length)]);
+  jiList.push(shishenJi[rint(rng, 0, shishenJi.length - 1)]);
 
   // 2. 刑冲合害忌
   const dayBranchJi = bz.dayGz[1];
@@ -1567,27 +1571,54 @@ SIGNS.forEach((s) => {
   b.onclick = () => { tmpSign = (tmpSign === s) ? null : s; refreshPanel(); };
   signsBox.appendChild(b);
 });
-function ensureDate() { if (tmpY === null) { tmpY = 2000; tmpM = 1; tmpD = 1; } }
-function clampDay() {
+// 初始化下拉选项
+(function initSelects() {
+  const curYear = new Date().getFullYear();
+  const ySel = $("ySel"), mSel = $("mSel"), dSel = $("dSel"), hSel = $("hSel");
+  for (let y = curYear; y >= 1930; y--) {
+    const o = document.createElement("option");
+    o.value = y; o.textContent = y + " 年";
+    ySel.appendChild(o);
+  }
+  for (let m = 1; m <= 12; m++) {
+    const o = document.createElement("option");
+    o.value = m; o.textContent = m + " 月";
+    mSel.appendChild(o);
+  }
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement("option");
+    o.value = d; o.textContent = d + " 日";
+    dSel.appendChild(o);
+  }
+  const hNone = document.createElement("option");
+  hNone.value = -1; hNone.textContent = "未知";
+  hSel.appendChild(hNone);
+  HOURS.forEach((h, i) => {
+    const o = document.createElement("option");
+    o.value = i; o.textContent = h;
+    hSel.appendChild(o);
+  });
+
+  ySel.onchange = () => { tmpY = ySel.value ? parseInt(ySel.value, 10) : null; clampDayOptions(); };
+  mSel.onchange = () => { tmpM = parseInt(mSel.value, 10); clampDayOptions(); };
+  dSel.onchange = () => { tmpD = parseInt(dSel.value, 10); };
+  hSel.onchange = () => { tmpH = parseInt(hSel.value, 10); };
+})();
+
+function clampDayOptions() {
+  if (tmpY === null) return;
   const max = new Date(tmpY, tmpM, 0).getDate();
   if (tmpD > max) tmpD = max;
+  $("dSel").value = tmpD;
 }
 function refreshPanel() {
   signsBox.querySelectorAll("button").forEach((b) =>
     b.classList.toggle("on", b.textContent === tmpSign));
-  $("yV").textContent = tmpY === null ? "未设置" : tmpY;
-  $("mV").textContent = tmpY === null ? "—" : tmpM;
-  $("dV").textContent = tmpY === null ? "—" : tmpD;
-  $("hV").textContent = tmpH < 0 ? "未知" : HOURS[tmpH];
+  $("ySel").value = tmpY === null ? "" : tmpY;
+  $("mSel").value = tmpM;
+  $("dSel").value = tmpD;
+  $("hSel").value = tmpH;
 }
-$("yM").onclick = () => { ensureDate(); tmpY = Math.max(1930, tmpY - 1); clampDay(); refreshPanel(); };
-$("yP").onclick = () => { ensureDate(); tmpY = Math.min(2016, tmpY + 1); clampDay(); refreshPanel(); };
-$("mM").onclick = () => { ensureDate(); tmpM = Math.max(1, tmpM - 1); clampDay(); refreshPanel(); };
-$("mP").onclick = () => { ensureDate(); tmpM = Math.min(12, tmpM + 1); clampDay(); refreshPanel(); };
-$("dM").onclick = () => { ensureDate(); tmpD = Math.max(1, tmpD - 1); refreshPanel(); };
-$("dP").onclick = () => { ensureDate(); tmpD = Math.min(new Date(tmpY, tmpM, 0).getDate(), tmpD + 1); refreshPanel(); };
-$("hM").onclick = () => { tmpH = Math.max(-1, tmpH - 1); refreshPanel(); };
-$("hP").onclick = () => { tmpH = Math.min(11, tmpH + 1); refreshPanel(); };
 $("meClear").onclick = () => { tmpSign = null; tmpY = null; tmpH = -1; refreshPanel(); };
 $("meCancel").onclick = () => { overlay.hidden = true; };
 $("meOk").onclick = () => {
