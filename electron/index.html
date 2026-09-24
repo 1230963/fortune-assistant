@@ -261,7 +261,10 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <span></span>
       <div class="level-badge" id="levelBadge"></div>
-      <button class="ghost" id="tomorrowBtn" style="padding:2px 8px;font-size:9px">📅 明天</button>
+      <div style="display:flex;gap:3px;align-items:center">
+        <input type="date" id="datePicker" style="font-size:10px;padding:2px 4px;border:1px solid #E0D4BE;border-radius:4px;background:#FFFDF7;color:#43302B;outline:none">
+        <button class="ghost" id="randomDay" style="padding:2px 6px;font-size:9px">🎲</button>
+      </div>
     </div>
     <div class="poem" id="poem"></div>
     <div class="hint" id="hint"></div>
@@ -1723,11 +1726,35 @@ $("bookNext").onclick = () => bookShow(parseInt($("bookPage").value, 10) + 1);
 $("bookRandom").onclick = () => bookShow(Math.floor(Math.random() * 600) + 1);
 bookShow(123);
 
-// 预览明天/今天切换
-$("tomorrowBtn").onclick = () => {
-  viewDateOffset = viewDateOffset === 0 ? 1 : 0;
-  $("tomorrowBtn").textContent = viewDateOffset === 0 ? "📅 明天" : "📅 今天";
-  render();
+// 日期选择器：未来 30 天任意一天 + 随机
+(function initDatePicker() {
+  const picker = $("datePicker");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  picker.valueAsDate = today;
+  picker.min = today.toISOString().split("T")[0];
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + 30);
+  picker.max = maxDate.toISOString().split("T")[0];
+
+  picker.onchange = () => {
+    const selected = picker.valueAsDate;
+    if (!selected) return;
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    selected.setHours(0, 0, 0, 0);
+    viewDateOffset = Math.round((selected - t) / 86400000);
+    render();
+  };
+})();
+
+// 随机选未来 30 天中的一天
+$("randomDay").onclick = () => {
+  const offset = Math.floor(Math.random() * 31);
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  $("datePicker").valueAsDate = d;
+  $("datePicker").onchange();
 };
 
 render();
